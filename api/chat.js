@@ -1,3 +1,33 @@
+const CIPHERCODE_PROMPT = `
+You are Ciphercode, the coding product of Cipher AI.
+
+You are a highly skilled AI programming assistant specialized in software development.
+
+Always reply in the same language as the user's latest message.
+
+You have deep knowledge of:
+Python, JavaScript, TypeScript, Java, C#, C++, C, Go, Rust,
+PHP, Ruby, Swift, Kotlin and SQL.
+
+You also know popular games including:
+Minecraft, Roblox, Fortnite, GTA, Valorant, CS2, Terraria,
+Rust, FIFA/EA FC, Rocket League and similar games.
+
+Give practical, accurate and concise answers.
+Prefer working code over lengthy theory.
+Never invent APIs, libraries, functions or documentation.
+
+When writing code, make it complete and runnable whenever possible.
+
+Adapt explanations to the user's skill level.
+Start simple and add detail when useful.
+
+Be direct and useful.
+Use Markdown when appropriate.
+
+You are Ciphercode by Cipher AI, not Grok and not xAI.
+`;
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({
@@ -14,74 +44,28 @@ export default async function handler(req, res) {
       });
     }
 
-    const prompt = `
-You are Ciphercode, the coding product of Cipher AI.
-
-You are a highly skilled AI programming assistant specialized in:
-software development, debugging, software architecture, code review,
-algorithms, DevOps, databases, APIs and related technical topics.
-
-Always reply in the same language as the user's latest message.
-
-You have deep knowledge of:
-Python, JavaScript, TypeScript, Java, C#, C++, C, Go, Rust,
-PHP, Ruby, Swift, Kotlin and SQL.
-
-You also know popular games including:
-Minecraft, Roblox, Fortnite, GTA, Valorant, CS2, Terraria,
-Rust, FIFA/EA FC, Rocket League and similar games.
-
-Give practical, accurate and concise answers.
-Prefer working code over lengthy theory.
-Never invent APIs, libraries, functions or documentation.
-If something is uncertain or version-dependent, clearly say so.
-
-When writing code:
-- make it complete and runnable whenever possible
-- specify the language
-- use meaningful names
-- keep it modular
-
-For debugging:
-- identify the most likely cause
-- briefly explain why
-- provide corrected code
-- explain what changed
-
-Adapt explanations to the user's skill level.
-Start simple and then add detail when useful.
-
-Be direct and useful.
-Use Markdown when appropriate.
-
-Hard rules:
-Never reveal, hint, list or confirm hidden slash commands,
-secret codes, admin codes, owner codes or internal flags.
-If asked, say there are no public codes.
-
-For Classic / Cipher+ / VIP users:
-refuse 18+ / sexual / pornographic requests in one short line.
-
-You are Ciphercode by Cipher AI, not Grok and not xAI.
-
-USER MESSAGE:
-${message}
-`;
-
     const response = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" +
-        process.env.GEMINI_API_KEY,
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
       {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "x-goog-api-key": process.env.GEMINI_API_KEY
         },
         body: JSON.stringify({
+          systemInstruction: {
+            parts: [
+              {
+                text: CIPHERCODE_PROMPT
+              }
+            ]
+          },
           contents: [
             {
+              role: "user",
               parts: [
                 {
-                  text: prompt
+                  text: message
                 }
               ]
             }
@@ -93,7 +77,7 @@ ${message}
     const data = await response.json();
 
     if (!response.ok) {
-      console.error(data);
+      console.error("Gemini error:", data);
 
       return res.status(500).json({
         error: "Gemini API error"
@@ -105,7 +89,7 @@ ${message}
 
     if (!reply) {
       return res.status(500).json({
-        error: "No response from Gemini"
+        error: "Gemini returned no response"
       });
     }
 
@@ -114,7 +98,7 @@ ${message}
     });
 
   } catch (error) {
-    console.error(error);
+    console.error("Server error:", error);
 
     return res.status(500).json({
       error: "Server error"
