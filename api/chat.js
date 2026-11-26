@@ -204,16 +204,7 @@ if (contents.length === 0 || contents[contents.length - 1].role !== "user") {
             ]
           },
 
-          contents: [
-            {
-              role: "user",
-              parts: [
-                {
-                  text: message
-                }
-              ]
-            }
-          ]
+          contents: contents
 
         })
       }
