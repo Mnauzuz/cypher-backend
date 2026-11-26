@@ -150,7 +150,32 @@ export default async function handler(req, res) {
   try {
 
     // Get message from frontend
-    const { message } = req.body || {};
+    const { history } = req.body || {};
+
+if (!Array.isArray(history) || history.length === 0) {
+    return res.status(400).json({
+        error: "Conversation history is required"
+    });
+}
+
+const contents = history
+    .filter(item =>
+        item &&
+        ["user", "assistant"].includes(item.role) &&
+        typeof item.content === "string" &&
+        item.content.trim()
+    )
+    .slice(-30)
+    .map(item => ({
+        role: item.role === "assistant" ? "model" : "user",
+        parts: [{ text: item.content }]
+    }));
+
+if (contents.length === 0 || contents[contents.length - 1].role !== "user") {
+    return res.status(400).json({
+        error: "A user message is required"
+    });
+}
 
     if (!message || typeof message !== "string") {
       return res.status(400).json({
