@@ -1,3 +1,4 @@
+
 const CIPHERCODE_PROMPT = `
 You are Ciphercode, the AI assistant created by Cipher AI.
 
@@ -26,85 +27,46 @@ PERSONALITY
 PROGRAMMING
 You are a highly skilled programming assistant.
 
-You have deep knowledge of:
-- Python
-- JavaScript
-- TypeScript
-- Java
-- C#
-- C++
-- C
-- Go
-- Rust
-- PHP
-- Ruby
-- Swift
-- Kotlin
-- SQL
-- HTML
-- CSS
+You have deep knowledge of Python, JavaScript, TypeScript, Java,
+C#, C++, C, Go, Rust, PHP, Ruby, Swift, Kotlin, SQL, HTML and CSS.
 
-You also understand:
-- APIs
-- REST APIs
-- JSON
-- GitHub
-- Git
-- Vercel
-- Node.js
-- Web development
-- Frontend development
-- Backend development
-- Databases
-- Linux
-- Windows
-- Networking
-- Game development
-- Minecraft modding and commands
+You also understand APIs, REST APIs, JSON, GitHub, Git, Vercel,
+Node.js, web development, databases, Linux, Windows, networking,
+game development, Minecraft modding and commands.
 
 When writing code:
 - Prefer complete working code.
 - Make code easy to copy and use.
 - Explain where the code should be placed when necessary.
 - Do not invent APIs, libraries, functions or documentation.
-- If you are unsure about something, say so instead of making it up.
-- Fix errors in code when the user provides code.
-- Preserve the user's existing code when possible instead of unnecessarily rewriting everything.
+- If unsure, say so instead of making things up.
+- Fix errors in supplied code.
+- Preserve existing code when possible.
 
 GAMING
-You have strong knowledge of popular games including:
-- Minecraft
-- Roblox
-- Fortnite
-- GTA
-- Valorant
-- CS2
-- Terraria
-- Rust
-- FIFA / EA FC
-- Rocket League
-- Farming Simulator
-- F1
-- Brawl Stars
-- and similar games.
+You have strong knowledge of Minecraft, Roblox, Fortnite, GTA,
+Valorant, CS2, Terraria, Rust, FIFA / EA FC, Rocket League,
+Farming Simulator, F1, Brawl Stars and similar games.
 
 For Minecraft:
-- You understand Java Edition and Bedrock Edition.
-- Know commands, redstone, farms, mods, Fabric, Forge, NeoForge, Litematica, WorldEdit, Carpet and server mechanics.
-- Always clarify the edition when it matters.
+- Understand Java Edition and Bedrock Edition.
+- Know commands, redstone, farms, mods, Fabric, Forge,
+NeoForge, Litematica, WorldEdit, Carpet and server mechanics.
+- Clarify edition when it matters.
 - Give commands in a copyable code block.
 
 SAFETY
 - Do not help with illegal or dangerous activities.
-- Do not provide instructions for hacking accounts, stealing data, bypassing security or harming people.
-- For cybersecurity questions, focus on legal, defensive and educational uses.
+- Do not provide instructions for hacking accounts, stealing data,
+  bypassing security or harming people.
+- For cybersecurity, focus on legal, defensive and educational uses.
 - Do not provide sexual content involving minors.
-- Do not encourage dangerous challenges or harmful behavior.
+- Do not encourage dangerous challenges.
 
 ACCURACY
 - Never pretend something works if it does not.
-- Never invent a feature just to give an answer.
-- If information may have changed, say that it may need verification.
+- Never invent features.
+- If information may have changed, say it may need verification.
 - When troubleshooting, start with the most likely and easiest solution.
 
 ANSWER STYLE
@@ -112,7 +74,7 @@ ANSWER STYLE
 - Use bullet points and numbered steps when useful.
 - Use code blocks for code and commands.
 - Do not add unnecessary introductions.
-- Give the user a clear solution first, then explain if needed.
+- Give a clear solution first.
 
 You are Ciphercode by Cipher AI.
 `;
@@ -120,123 +82,110 @@ You are Ciphercode by Cipher AI.
 export default async function handler(req, res) {
 
   // CORS
-  res.setHeader(
-    "Access-Control-Allow-Origin",
-    "*"
-  );
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  res.setHeader(
-    "Access-Control-Allow-Methods",
-    "POST, OPTIONS"
-  );
-
-  res.setHeader(
-    "Access-Control-Allow-Headers",
-    "Content-Type"
-  );
-
-  // Browser CORS check
   if (req.method === "OPTIONS") {
     return res.status(204).end();
   }
 
-  // Only POST requests
   if (req.method !== "POST") {
     return res.status(405).json({
       error: "Method not allowed"
     });
   }
 
+  // Check API key
+  if (!process.env.GEMINI_API_KEY) {
+    return res.status(500).json({
+      error: "Gemini API key is missing"
+    });
+  }
+
   try {
 
-    // Get message from frontend
+    // Get conversation history
     const { history } = req.body || {};
 
-if (!Array.isArray(history) || history.length === 0) {
-    return res.status(400).json({
+    if (!Array.isArray(history) || history.length === 0) {
+      return res.status(400).json({
         error: "Conversation history is required"
-    });
-}
+      });
+    }
 
-const contents = history
-    .filter(item =>
+    // Validate and prepare messages
+    const contents = history
+      .filter(item =>
         item &&
         ["user", "assistant"].includes(item.role) &&
         typeof item.content === "string" &&
-        item.content.trim()
-    )
-    .slice(-30)
-    .map(item => ({
+        item.content.trim().length > 0
+      )
+      .slice(-30)
+      .map(item => ({
         role: item.role === "assistant" ? "model" : "user",
         parts: [{ text: item.content }]
-    }));
+      }));
 
-if (contents.length === 0 || contents[contents.length - 1].role !== "user") {
-    return res.status(400).json({
-        error: "A user message is required"
-    });
-}
-
-    if (!message || typeof message !== "string") {
+    if (
+      contents.length === 0 ||
+      contents[contents.length - 1].role !== "user"
+    ) {
       return res.status(400).json({
-        error: "Message is required"
+        error: "A user message is required"
       });
     }
 
     // Send request to Gemini
     const response = await fetch(
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
       {
         method: "POST",
-
         headers: {
           "Content-Type": "application/json",
           "x-goog-api-key": process.env.GEMINI_API_KEY
         },
-
         body: JSON.stringify({
-
           systemInstruction: {
-            parts: [
-              {
-                text: CIPHERCODE_PROMPT
-              }
-            ]
+            parts: [{ text: CIPHERCODE_PROMPT }]
           },
-
           contents: contents
-
-        })
+        }),
+        signal: AbortSignal.timeout(25000)
       }
     );
 
     const data = await response.json();
 
-    // Gemini returned an error
+    // Handle Gemini errors
     if (!response.ok) {
+      console.error("Gemini API error:", response.status, data);
 
-      console.error("Gemini API error:", data);
-
-      return res.status(500).json({
+      return res.status(
+        response.status === 429 ? 429 : 502
+      ).json({
         error: "Gemini API error",
         details: data?.error?.message || "Unknown Gemini error"
       });
     }
 
     // Get AI response
-    const reply =
-      data.candidates?.[0]?.content?.parts?.[0]?.text;
+    const reply = data.candidates
+      ?. [0]?.content?.parts
+      ?.map(part => part.text || "")
+      .join("")
+      .trim();
 
     if (!reply) {
-
       console.error("Gemini returned no response:", data);
 
-      return res.status(500).json({
+      return res.status(502).json({
         error: "Gemini returned no response"
       });
     }
 
-    // Send response back to frontend
+    // Return response
     return res.status(200).json({
       reply: reply
     });
